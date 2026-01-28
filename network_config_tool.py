@@ -171,6 +171,17 @@ class NetworkConfigTool(QMainWindow):
         mac_layout.addWidget(self.mac_edit)
         form_layout.addLayout(mac_layout)
         
+        # 物理地址名称
+        mac_name_layout = QHBoxLayout()
+        self.mac_name_label = QLabel("物理地址名称:")
+        self.mac_name_label.setFixedWidth(80)
+        self.mac_name_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.mac_name_edit = QLineEdit()
+        self.mac_name_edit.setText("Network Address")
+        mac_name_layout.addWidget(self.mac_name_label)
+        mac_name_layout.addWidget(self.mac_name_edit)
+        form_layout.addLayout(mac_name_layout)
+        
         self.config_group_layout.addLayout(form_layout)
     
     def add_network_card_selector(self):
@@ -253,6 +264,11 @@ class NetworkConfigTool(QMainWindow):
             else:
                 self.dns2_edit.setText('')
             self.mac_edit.setText(user_data['mac'])
+            # 检查是否有物理地址名称
+            if 'mac_name' in user_data:
+                self.mac_name_edit.setText(user_data['mac_name'])
+            else:
+                self.mac_name_edit.setText('Network Address')
     
     def on_confirm(self):
         """确定按钮点击事件"""
@@ -263,10 +279,11 @@ class NetworkConfigTool(QMainWindow):
         dns = self.dns_edit.text()
         dns2 = self.dns2_edit.text()
         mac = self.mac_edit.text()
+        mac_name = self.mac_name_edit.text()
         selected_card = self.card_combo.currentText()
         
         # 验证输入
-        if not all([ip, netmask, gateway, dns, mac, selected_card]):
+        if not all([ip, netmask, gateway, dns, mac, mac_name, selected_card]):
             QMessageBox.warning(self, "警告", "请确保所有配置项都已填写")
             return
         
@@ -282,6 +299,7 @@ class NetworkConfigTool(QMainWindow):
         if dns2:
             layout.addWidget(QLabel(f"备用DNS: {dns2}"))
         layout.addWidget(QLabel(f"MAC地址: {mac}"))
+        layout.addWidget(QLabel(f"物理地址名称: {mac_name}"))
         
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | 
                                   QDialogButtonBox.StandardButton.Cancel, dialog)
@@ -291,23 +309,23 @@ class NetworkConfigTool(QMainWindow):
         
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # 应用配置
-            success = self.apply_config(selected_card, ip, netmask, gateway, dns, dns2, mac)
+            success = self.apply_config(selected_card, ip, netmask, gateway, dns, dns2, mac, mac_name)
             if success:
                 QMessageBox.information(self, "成功", "网络配置修改成功")
             else:
                 QMessageBox.critical(self, "失败", "网络配置修改失败")
     
-    def apply_config(self, card, ip, netmask, gateway, dns, dns2, mac):
+    def apply_config(self, card, ip, netmask, gateway, dns, dns2, mac, mac_name):
         """应用网络配置"""
         system = platform.system()
         
         try:
             if system == "Windows":
-                return self.apply_config_windows(card, ip, netmask, gateway, dns, dns2, mac)
+                return self.apply_config_windows(card, ip, netmask, gateway, dns, dns2, mac, mac_name)
             elif system == "Darwin":
-                return self.apply_config_macos(card, ip, netmask, gateway, dns, dns2, mac)
+                return self.apply_config_macos(card, ip, netmask, gateway, dns, dns2, mac, mac_name)
             elif system == "Linux":
-                return self.apply_config_linux(card, ip, netmask, gateway, dns, dns2, mac)
+                return self.apply_config_linux(card, ip, netmask, gateway, dns, dns2, mac, mac_name)
             else:
                 QMessageBox.warning(self, "警告", f"不支持的操作系统: {system}")
                 return False
@@ -315,7 +333,7 @@ class NetworkConfigTool(QMainWindow):
             QMessageBox.critical(self, "错误", f"应用配置失败: {str(e)}")
             return False
     
-    def apply_config_windows(self, card, ip, netmask, gateway, dns, dns2, mac):
+    def apply_config_windows(self, card, ip, netmask, gateway, dns, dns2, mac, mac_name):
         """在Windows上应用配置"""
         try:
             # 检查是否以管理员身份运行
@@ -408,7 +426,7 @@ class NetworkConfigTool(QMainWindow):
                 ps_mac_script = f"""
 $adapter = Get-NetAdapter -Name '{card}'
 if ($adapter) {{
-    Set-NetAdapterAdvancedProperty -Name '{card}' -DisplayName 'Network Address' -DisplayValue '{mac}'
+    Set-NetAdapterAdvancedProperty -Name '{card}' -DisplayName '{mac_name}' -DisplayValue '{mac}'
     Write-Output 'MAC地址修改成功'
 }}
 """
@@ -457,7 +475,7 @@ if ($adapter) {{
             traceback.print_exc()
             return False
     
-    def apply_config_macos(self, card, ip, netmask, gateway, dns, dns2, mac):
+    def apply_config_macos(self, card, ip, netmask, gateway, dns, dns2, mac, mac_name):
         """在macOS上应用配置"""
         # 设置IP地址和子网掩码
         cmd = f"networksetup -setmanual '{card}' {ip} {netmask} {gateway}"
@@ -474,7 +492,7 @@ if ($adapter) {{
         # 注意：macOS下修改MAC地址需要root权限
         return True
     
-    def apply_config_linux(self, card, ip, netmask, gateway, dns, dns2, mac):
+    def apply_config_linux(self, card, ip, netmask, gateway, dns, dns2, mac, mac_name):
         """在Linux上应用配置"""
         # 禁用网卡
         subprocess.run(['sudo', 'ifconfig', card, 'down'], shell=True, check=True)

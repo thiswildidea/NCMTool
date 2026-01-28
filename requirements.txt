@@ -1,0 +1,3 @@
+PyQt6
+wmi; platform_system == "Windows"
+netifaces

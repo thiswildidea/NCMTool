@@ -1,0 +1,45 @@
+# Python项目常见忽略项
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境
+venv/
+env/
+env.local/
+env.*
+
+# IDE和编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+Thumbs.db
+.DS_Store
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 打包生成的文件和目录
+build/
+dist/
+*.spec
+
+# 其他生成文件
+localpycs/
+*.pkg
+*.toc
+*.pyc
+base_library.zip
+warn-*.txt
+xref-*.html
+
+# 配置文件（如果需要版本控制，可注释掉）
+# config.json

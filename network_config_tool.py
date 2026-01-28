@@ -151,6 +151,16 @@ class NetworkConfigTool(QMainWindow):
         dns_layout.addWidget(self.dns_edit)
         form_layout.addLayout(dns_layout)
         
+        # 备用DNS
+        dns2_layout = QHBoxLayout()
+        self.dns2_label = QLabel("备用DNS:")
+        self.dns2_label.setFixedWidth(80)
+        self.dns2_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.dns2_edit = QLineEdit()
+        dns2_layout.addWidget(self.dns2_label)
+        dns2_layout.addWidget(self.dns2_edit)
+        form_layout.addLayout(dns2_layout)
+        
         # MAC地址
         mac_layout = QHBoxLayout()
         self.mac_label = QLabel("MAC地址:")
@@ -194,7 +204,12 @@ class NetworkConfigTool(QMainWindow):
                 w = wmi.WMI()
                 for nic in w.Win32_NetworkAdapter():
                     if nic.NetConnectionStatus == 2:  # 已连接
-                        cards.append(nic.Name)
+                        # 使用NetConnectionID获取显示名称，如"以太网 3"
+                        if hasattr(nic, 'NetConnectionID') and nic.NetConnectionID:
+                            cards.append(nic.NetConnectionID)
+                        else:
+                            # 如果没有NetConnectionID属性，使用Name属性
+                            cards.append(nic.Name)
             elif system == "Darwin":  # macOS
                 result = subprocess.run(['networksetup', '-listallnetworkservices'], 
                                        capture_output=True, text=True)
@@ -232,6 +247,11 @@ class NetworkConfigTool(QMainWindow):
             self.netmask_edit.setText(user_data['netmask'])
             self.gateway_edit.setText(user_data['gateway'])
             self.dns_edit.setText(user_data['dns'])
+            # 检查是否有备用DNS
+            if 'dns2' in user_data:
+                self.dns2_edit.setText(user_data['dns2'])
+            else:
+                self.dns2_edit.setText('')
             self.mac_edit.setText(user_data['mac'])
     
     def on_confirm(self):
@@ -241,6 +261,7 @@ class NetworkConfigTool(QMainWindow):
         netmask = self.netmask_edit.text()
         gateway = self.gateway_edit.text()
         dns = self.dns_edit.text()
+        dns2 = self.dns2_edit.text()
         mac = self.mac_edit.text()
         selected_card = self.card_combo.currentText()
         
@@ -258,6 +279,8 @@ class NetworkConfigTool(QMainWindow):
         layout.addWidget(QLabel(f"子网掩码: {netmask}"))
         layout.addWidget(QLabel(f"网关: {gateway}"))
         layout.addWidget(QLabel(f"DNS: {dns}"))
+        if dns2:
+            layout.addWidget(QLabel(f"备用DNS: {dns2}"))
         layout.addWidget(QLabel(f"MAC地址: {mac}"))
         
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | 
@@ -268,23 +291,23 @@ class NetworkConfigTool(QMainWindow):
         
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # 应用配置
-            success = self.apply_config(selected_card, ip, netmask, gateway, dns, mac)
+            success = self.apply_config(selected_card, ip, netmask, gateway, dns, dns2, mac)
             if success:
                 QMessageBox.information(self, "成功", "网络配置修改成功")
             else:
                 QMessageBox.critical(self, "失败", "网络配置修改失败")
     
-    def apply_config(self, card, ip, netmask, gateway, dns, mac):
+    def apply_config(self, card, ip, netmask, gateway, dns, dns2, mac):
         """应用网络配置"""
         system = platform.system()
         
         try:
             if system == "Windows":
-                return self.apply_config_windows(card, ip, netmask, gateway, dns, mac)
+                return self.apply_config_windows(card, ip, netmask, gateway, dns, dns2, mac)
             elif system == "Darwin":
-                return self.apply_config_macos(card, ip, netmask, gateway, dns, mac)
+                return self.apply_config_macos(card, ip, netmask, gateway, dns, dns2, mac)
             elif system == "Linux":
-                return self.apply_config_linux(card, ip, netmask, gateway, dns, mac)
+                return self.apply_config_linux(card, ip, netmask, gateway, dns, dns2, mac)
             else:
                 QMessageBox.warning(self, "警告", f"不支持的操作系统: {system}")
                 return False
@@ -292,7 +315,7 @@ class NetworkConfigTool(QMainWindow):
             QMessageBox.critical(self, "错误", f"应用配置失败: {str(e)}")
             return False
     
-    def apply_config_windows(self, card, ip, netmask, gateway, dns, mac):
+    def apply_config_windows(self, card, ip, netmask, gateway, dns, dns2, mac):
         """在Windows上应用配置"""
         try:
             # 检查是否以管理员身份运行
@@ -306,7 +329,12 @@ class NetworkConfigTool(QMainWindow):
             w = wmi.WMI()
             nic_index = None
             for nic in w.Win32_NetworkAdapter():
-                if nic.Name == card:
+                # 检查NetConnectionID是否匹配（显示名称，如"以太网 3"）
+                if hasattr(nic, 'NetConnectionID') and nic.NetConnectionID == card:
+                    nic_index = nic.Index
+                    break
+                # 如果NetConnectionID不匹配，检查Name属性
+                elif nic.Name == card:
                     nic_index = nic.Index
                     break
             
@@ -318,7 +346,7 @@ class NetworkConfigTool(QMainWindow):
             print(f"找到网卡: {card}, 索引: {nic_index}")
             
             # 设置IP地址、子网掩码和网关
-            cmd = f"netsh interface ip set address name='{card}' static {ip} {netmask} {gateway} 1"
+            cmd = f"netsh interface ip set addr \"{card}\" static {ip} {netmask} {gateway}"
             print(f"执行命令: {cmd}")
             # 使用正确的编码处理输出
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
@@ -332,7 +360,7 @@ class NetworkConfigTool(QMainWindow):
                 return False
             
             # 设置DNS
-            cmd = f"netsh interface ip set dns name='{card}' static {dns}"
+            cmd = f"netsh interface ip set dns \"{card}\" static {dns} primary"
             print(f"执行命令: {cmd}")
             # 使用正确的编码处理输出
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
@@ -345,14 +373,79 @@ class NetworkConfigTool(QMainWindow):
                 QMessageBox.critical(self, "错误", f"设置DNS失败: {error_msg}")
                 return False
             
+            # 设置备用DNS
+            if dns2:
+                cmd = f"netsh interface ip add dns \"{card}\" {dns2} index=2"
+                print(f"执行命令: {cmd}")
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+                print(f"命令返回码: {result.returncode}")
+                print(f"命令输出: {result.stdout}")
+                print(f"命令错误: {result.stderr}")
+                
+                if result.returncode != 0:
+                    error_msg = result.stderr if result.stderr else "未知错误"
+                    print(f"设置备用DNS失败: {error_msg}")
+                    # 备用DNS设置失败不影响其他配置
+            
             # 验证配置是否生效
-            cmd = f"netsh interface ip show address name='{card}'"
+            cmd = f"netsh interface ip show addresses \"{card}\""
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             print(f"验证IP配置: {result.stdout}")
             
-            cmd = f"netsh interface ip show dns name='{card}'"
+            cmd = f"netsh interface ip show dnsservers \"{card}\""
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
             print(f"验证DNS配置: {result.stdout}")
+            
+            # 尝试修改MAC地址
+            print(f"尝试修改MAC地址为: {mac}")
+            try:
+                # 禁用网卡
+                cmd = f"netsh interface set interface \"{card}\" admin=disable"
+                subprocess.run(cmd, shell=True, check=True)
+                print("网卡已禁用")
+                
+                # 修改MAC地址（使用PowerShell）
+                ps_mac_script = f"""
+$adapter = Get-NetAdapter -Name '{card}'
+if ($adapter) {{
+    Set-NetAdapterAdvancedProperty -Name '{card}' -DisplayName 'Network Address' -DisplayValue '{mac}'
+    Write-Output 'MAC地址修改成功'
+}}
+"""
+                
+                result = subprocess.run(
+                    ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_script],
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore'
+                )
+                
+                print(f"MAC地址修改返回码: {result.returncode}")
+                print(f"MAC地址修改输出: {result.stdout}")
+                print(f"MAC地址修改错误: {result.stderr}")
+                
+                # 启用网卡
+                cmd = f"netsh interface set interface \"{card}\" admin=enable"
+                subprocess.run(cmd, shell=True, check=True)
+                print("网卡已启用")
+                
+            except Exception as e:
+                print(f"修改MAC地址失败: {str(e)}")
+                # MAC地址修改失败不影响其他配置
+            
+            # 验证MAC地址
+            ps_mac_check = f"Get-NetAdapter -Name '{card}' | Select-Object Name, MacAddress"
+            result = subprocess.run(
+                ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_check],
+                shell=True,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore'
+            )
+            print(f"验证MAC地址: {result.stdout}")
             
             # 提示用户可能需要重启网卡
             QMessageBox.information(self, "提示", "网络配置已应用，某些更改可能需要重启网卡才能完全生效。")
@@ -364,21 +457,24 @@ class NetworkConfigTool(QMainWindow):
             traceback.print_exc()
             return False
     
-    def apply_config_macos(self, card, ip, netmask, gateway, dns, mac):
+    def apply_config_macos(self, card, ip, netmask, gateway, dns, dns2, mac):
         """在macOS上应用配置"""
         # 设置IP地址和子网掩码
         cmd = f"networksetup -setmanual '{card}' {ip} {netmask} {gateway}"
         subprocess.run(cmd, shell=True, check=True)
         
         # 设置DNS
-        cmd = f"networksetup -setdnsservers '{card}' {dns}"
+        if dns2:
+            cmd = f"networksetup -setdnsservers '{card}' {dns} {dns2}"
+        else:
+            cmd = f"networksetup -setdnsservers '{card}' {dns}"
         subprocess.run(cmd, shell=True, check=True)
         
         # 设置MAC地址
         # 注意：macOS下修改MAC地址需要root权限
         return True
     
-    def apply_config_linux(self, card, ip, netmask, gateway, dns, mac):
+    def apply_config_linux(self, card, ip, netmask, gateway, dns, dns2, mac):
         """在Linux上应用配置"""
         # 禁用网卡
         subprocess.run(['sudo', 'ifconfig', card, 'down'], shell=True, check=True)
@@ -394,6 +490,8 @@ class NetworkConfigTool(QMainWindow):
         # 设置DNS
         with open('/etc/resolv.conf', 'w') as f:
             f.write(f'nameserver {dns}\n')
+            if dns2:
+                f.write(f'nameserver {dns2}\n')
         
         # 设置MAC地址
         subprocess.run(['sudo', 'ifconfig', card, 'hw', 'ether', mac], 

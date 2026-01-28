@@ -24,9 +24,11 @@ def build():
     # 构建命令
     build_cmd = [
         'pyinstaller',
-        '--name', '网络配置管理工具',
+        '--name', 'NCMTool',
         '--onefile',
         '--windowed',
+        '--add-data', 'config.json;.',
+        '--add-data', 'network.png;.',
         'network_config_tool.py'
     ]
     
@@ -34,7 +36,7 @@ def build():
     subprocess.run(build_cmd, check=True)
     
     print("打包完成!")
-    print(f"可执行文件位置: dist/{'网络配置管理工具.exe' if system == 'Windows' else '网络配置管理工具'}")
+    print(f"可执行文件位置: dist/{'NCMTool.exe' if system == 'Windows' else 'NCMTool'}")
 
 if __name__ == "__main__":
     build()

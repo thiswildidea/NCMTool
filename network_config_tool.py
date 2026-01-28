@@ -23,8 +23,28 @@ class NetworkConfigTool(QMainWindow):
         self.setGeometry(100, 100, 600, 300)
         self.setFixedSize(600, 300)
         
+        # 设置窗口图标
+        from PyQt6.QtGui import QIcon
+        import sys
+        import os
+        
+        def resource_path(relative_path):
+            """获取资源文件的绝对路径"""
+            try:
+                # PyInstaller创建临时文件夹，将路径存储在_MEIPASS中
+                base_path = sys._MEIPASS
+            except Exception:
+                # 未打包时的路径
+                base_path = os.path.abspath('.')
+            
+            return os.path.join(base_path, relative_path)
+        
+        # 使用resource_path函数获取图标路径
+        icon_path = resource_path("network.png")
+        self.setWindowIcon(QIcon(icon_path))
+        
         # 配置文件路径
-        self.config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        self.config_file = resource_path("config.json")
         
         # 加载配置数据
         self.config_data = self.load_config()
@@ -43,6 +63,12 @@ class NetworkConfigTool(QMainWindow):
         self.config_panel = QWidget()
         self.config_layout = QVBoxLayout(self.config_panel)
         main_layout.addWidget(self.config_panel, 2)
+        
+        # 创建带边框的配置组
+        from PyQt6.QtWidgets import QGroupBox
+        self.config_group = QGroupBox("网络配置")
+        self.config_group_layout = QVBoxLayout(self.config_group)
+        self.config_layout.addWidget(self.config_group)
         
         # 创建配置字段
         self.create_config_fields()
@@ -135,7 +161,7 @@ class NetworkConfigTool(QMainWindow):
         mac_layout.addWidget(self.mac_edit)
         form_layout.addLayout(mac_layout)
         
-        self.config_layout.addLayout(form_layout)
+        self.config_group_layout.addLayout(form_layout)
     
     def add_network_card_selector(self):
         """添加网卡选择器"""
@@ -146,7 +172,7 @@ class NetworkConfigTool(QMainWindow):
         self.card_combo = QComboBox()
         self.card_layout.addWidget(self.card_label)
         self.card_layout.addWidget(self.card_combo)
-        self.config_layout.addLayout(self.card_layout)
+        self.config_group_layout.addLayout(self.card_layout)
         
         # 加载网卡信息
         self.load_network_cards()
@@ -268,29 +294,75 @@ class NetworkConfigTool(QMainWindow):
     
     def apply_config_windows(self, card, ip, netmask, gateway, dns, mac):
         """在Windows上应用配置"""
-        # 获取网卡索引
-        import wmi
-        w = wmi.WMI()
-        nic_index = None
-        for nic in w.Win32_NetworkAdapter():
-            if nic.Name == card:
-                nic_index = nic.Index
-                break
-        
-        if not nic_index:
+        try:
+            # 检查是否以管理员身份运行
+            import ctypes
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            if not is_admin:
+                QMessageBox.warning(self, "权限提示", "请以管理员身份运行程序，否则网络配置可能无法生效")
+            
+            # 获取网卡索引
+            import wmi
+            w = wmi.WMI()
+            nic_index = None
+            for nic in w.Win32_NetworkAdapter():
+                if nic.Name == card:
+                    nic_index = nic.Index
+                    break
+            
+            if not nic_index:
+                QMessageBox.critical(self, "错误", f"找不到网卡: {card}")
+                return False
+            
+            # 打印网卡信息
+            print(f"找到网卡: {card}, 索引: {nic_index}")
+            
+            # 设置IP地址、子网掩码和网关
+            cmd = f"netsh interface ip set address name='{card}' static {ip} {netmask} {gateway} 1"
+            print(f"执行命令: {cmd}")
+            # 使用正确的编码处理输出
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            print(f"命令返回码: {result.returncode}")
+            print(f"命令输出: {result.stdout}")
+            print(f"命令错误: {result.stderr}")
+            
+            if result.returncode != 0:
+                error_msg = result.stderr if result.stderr else "未知错误"
+                QMessageBox.critical(self, "错误", f"设置IP地址失败: {error_msg}")
+                return False
+            
+            # 设置DNS
+            cmd = f"netsh interface ip set dns name='{card}' static {dns}"
+            print(f"执行命令: {cmd}")
+            # 使用正确的编码处理输出
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            print(f"命令返回码: {result.returncode}")
+            print(f"命令输出: {result.stdout}")
+            print(f"命令错误: {result.stderr}")
+            
+            if result.returncode != 0:
+                error_msg = result.stderr if result.stderr else "未知错误"
+                QMessageBox.critical(self, "错误", f"设置DNS失败: {error_msg}")
+                return False
+            
+            # 验证配置是否生效
+            cmd = f"netsh interface ip show address name='{card}'"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            print(f"验证IP配置: {result.stdout}")
+            
+            cmd = f"netsh interface ip show dns name='{card}'"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            print(f"验证DNS配置: {result.stdout}")
+            
+            # 提示用户可能需要重启网卡
+            QMessageBox.information(self, "提示", "网络配置已应用，某些更改可能需要重启网卡才能完全生效。")
+            
+            return True
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"应用配置失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
-        
-        # 设置IP地址、子网掩码和网关
-        cmd = f"netsh interface ip set address name='{card}' static {ip} {netmask} {gateway} 1"
-        subprocess.run(cmd, shell=True, check=True)
-        
-        # 设置DNS
-        cmd = f"netsh interface ip set dns name='{card}' static {dns}"
-        subprocess.run(cmd, shell=True, check=True)
-        
-        # 设置MAC地址（Windows需要禁用/启用网卡）
-        # 注意：Windows下修改MAC地址可能需要重启网卡
-        return True
     
     def apply_config_macos(self, card, ip, netmask, gateway, dns, mac):
         """在macOS上应用配置"""

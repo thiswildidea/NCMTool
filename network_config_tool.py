@@ -200,8 +200,25 @@ class NetworkConfigTool(QMainWindow):
     
     def validate_gateway(self, gateway):
         """验证网关地址格式"""
-        # 网关验证与IP地址相同
-        return self.validate_ip(gateway)
+        if not gateway or not gateway.strip():
+            return False, "IP地址不能为空"
+        
+        # 正则表达式验证IPv4地址格式
+        ip_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        if not re.match(ip_pattern, gateway):
+            return False, "IP地址格式不正确，应为 xxx.xxx.xxx.xxx"
+        
+        # 验证每个 octet 是否在 0-255 之间
+        octets = gateway.split('.')
+        for octet in octets:
+            try:
+                value = int(octet)
+                if value < 0 or value > 255:
+                    return False, f"IP地址的每个部分应在 0-255 之间，当前值: {octet}"
+            except ValueError:
+                return False, f"IP地址的每个部分应为数字，当前值: {octet}"
+        
+        return True, ""
     
     def populate_tree(self):
         """填充树形结构"""

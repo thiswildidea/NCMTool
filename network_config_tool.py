@@ -9,6 +9,7 @@ import json
 import os
 import platform
 import subprocess
+import re
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem, QWidget,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox, QPushButton,
@@ -139,6 +140,69 @@ class NetworkConfigTool(QMainWindow):
             QMessageBox.warning(self, "警告", f"加载配置文件失败: {str(e)}\n将使用默认空配置")
             return []
     
+    def validate_ip(self, ip):
+        """验证IPv4地址格式"""
+        if not ip or not ip.strip():
+            return False, "IP地址不能为空"
+        
+        # 正则表达式验证IPv4地址格式
+        ip_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        if not re.match(ip_pattern, ip):
+            return False, "IP地址格式不正确，应为 xxx.xxx.xxx.xxx"
+        
+        # 验证每个 octet 是否在 0-255 之间
+        octets = ip.split('.')
+        for octet in octets:
+            try:
+                value = int(octet)
+                if value < 0 or value > 255:
+                    return False, f"IP地址的每个部分应在 0-255 之间，当前值: {octet}"
+            except ValueError:
+                return False, f"IP地址的每个部分应为数字，当前值: {octet}"
+        
+        return True, ""
+    
+    def validate_subnet_mask(self, subnet_mask):
+        """验证子网掩码格式（支持CIDR表示法）"""
+        if not subnet_mask or not subnet_mask.strip():
+            return False, "子网掩码不能为空"
+        
+        # 检查是否为 CIDR 表示法（如 24）
+        if subnet_mask.isdigit():
+            cidr = int(subnet_mask)
+            if cidr < 0 or cidr > 32:
+                return False, "CIDR表示法应在 0-32 之间"
+            return True, ""
+        
+        # 正则表达式验证子网掩码格式
+        mask_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        if not re.match(mask_pattern, subnet_mask):
+            return False, "子网掩码格式不正确，应为 xxx.xxx.xxx.xxx 或 CIDR表示法（如 24）"
+        
+        # 验证每个 octet 是否在 0-255 之间
+        octets = subnet_mask.split('.')
+        for octet in octets:
+            try:
+                value = int(octet)
+                if value < 0 or value > 255:
+                    return False, f"子网掩码的每个部分应在 0-255 之间，当前值: {octet}"
+            except ValueError:
+                return False, f"子网掩码的每个部分应为数字，当前值: {octet}"
+        
+        # 验证是否为有效的子网掩码
+        # 将子网掩码转换为二进制
+        binary_mask = ''.join([bin(int(octet))[2:].zfill(8) for octet in octets])
+        # 有效的子网掩码应该是连续的1后面跟着连续的0
+        if '01' in binary_mask:
+            return False, "子网掩码格式不正确，应为连续的1后面跟着连续的0"
+        
+        return True, ""
+    
+    def validate_gateway(self, gateway):
+        """验证网关地址格式"""
+        # 网关验证与IP地址相同
+        return self.validate_ip(gateway)
+    
     def populate_tree(self):
         """填充树形结构"""
         for dept in self.config_data:
@@ -169,9 +233,10 @@ class NetworkConfigTool(QMainWindow):
         
         # IP地址
         ip_layout = QHBoxLayout()
-        self.ip_label = QLabel("IP地址:")
+        self.ip_label = QLabel("IP地址: <span style='color:red'>*</span>")
         self.ip_label.setFixedWidth(80)
         self.ip_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.ip_label.setTextFormat(Qt.TextFormat.RichText)
         self.ip_edit = QLineEdit()
         ip_layout.addWidget(self.ip_label)
         ip_layout.addWidget(self.ip_edit)
@@ -179,9 +244,10 @@ class NetworkConfigTool(QMainWindow):
         
         # 子网掩码
         netmask_layout = QHBoxLayout()
-        self.netmask_label = QLabel("子网掩码:")
+        self.netmask_label = QLabel("子网掩码: <span style='color:red'>*</span>")
         self.netmask_label.setFixedWidth(80)
         self.netmask_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.netmask_label.setTextFormat(Qt.TextFormat.RichText)
         self.netmask_edit = QLineEdit()
         netmask_layout.addWidget(self.netmask_label)
         netmask_layout.addWidget(self.netmask_edit)
@@ -189,9 +255,10 @@ class NetworkConfigTool(QMainWindow):
         
         # 网关
         gateway_layout = QHBoxLayout()
-        self.gateway_label = QLabel("网关:")
+        self.gateway_label = QLabel("网关: <span style='color:red'>*</span>")
         self.gateway_label.setFixedWidth(80)
         self.gateway_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.gateway_label.setTextFormat(Qt.TextFormat.RichText)
         self.gateway_edit = QLineEdit()
         gateway_layout.addWidget(self.gateway_label)
         gateway_layout.addWidget(self.gateway_edit)
@@ -344,8 +411,22 @@ class NetworkConfigTool(QMainWindow):
         selected_card = self.card_combo.currentText()
         
         # 验证输入
-        if not all([ip, netmask, gateway]):
-            QMessageBox.warning(self, "警告", "请确保所有配置项都已填写")
+        # 验证IP地址
+        ip_valid, ip_error = self.validate_ip(ip)
+        if not ip_valid:
+            QMessageBox.warning(self, "警告", ip_error)
+            return
+        
+        # 验证子网掩码
+        netmask_valid, netmask_error = self.validate_subnet_mask(netmask)
+        if not netmask_valid:
+            QMessageBox.warning(self, "警告", netmask_error)
+            return
+        
+        # 验证网关
+        gateway_valid, gateway_error = self.validate_gateway(gateway)
+        if not gateway_valid:
+            QMessageBox.warning(self, "警告", gateway_error)
             return
         
         # 确认对话框

@@ -283,7 +283,7 @@ class NetworkConfigTool(QMainWindow):
         selected_card = self.card_combo.currentText()
         
         # 验证输入
-        if not all([ip, netmask, gateway, dns, mac, mac_name, selected_card]):
+        if not all([ip, netmask, gateway, dns]):
             QMessageBox.warning(self, "警告", "请确保所有配置项都已填写")
             return
         
@@ -415,55 +415,67 @@ class NetworkConfigTool(QMainWindow):
             print(f"验证DNS配置: {result.stdout}")
             
             # 尝试修改MAC地址
-            print(f"尝试修改MAC地址为: {mac}")
-            try:
-                # 禁用网卡
-                cmd = f"netsh interface set interface \"{card}\" admin=disable"
-                subprocess.run(cmd, shell=True, check=True)
-                print("网卡已禁用")
+            if mac:
+                print(f"尝试修改MAC地址为: {mac}")
+                try:
+                    # 禁用网卡
+                    cmd = f"netsh interface set interface \"{card}\" admin=disable"
+                    subprocess.run(cmd, shell=True, check=True)
+                    print("网卡已禁用")
+                    
+                    # 等待网卡完全禁用
+                    import time
+                    time.sleep(2)
+                    
+                    # 修改MAC地址（使用PowerShell）
+                    # 使用用户提供的PowerShell代码格式
+                    ps_mac_script = f"$adapter = Get-NetAdapter -Name '{card}'; if ($adapter) {{ Set-NetAdapterAdvancedProperty -Name '{card}' -DisplayName '{mac_name}' -DisplayValue '{mac}'; Write-Output 'MAC地址修改成功'; }}"
+                    
+                    result = subprocess.run(
+                        ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_script],
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        encoding='utf-8',
+                        errors='ignore'
+                    )
+                    
+                    print(f"MAC地址修改返回码: {result.returncode}")
+                    print(f"MAC地址修改输出: {result.stdout}")
+                    print(f"MAC地址修改错误: {result.stderr}")
+                    
+                    # 启用网卡
+                    cmd = f"netsh interface set interface \"{card}\" admin=enable"
+                    subprocess.run(cmd, shell=True, check=True)
+                    print("网卡已启用")
+                    
+                    # 等待网卡完全启用
+                    time.sleep(3)
+                    
+                except Exception as e:
+                    print(f"修改MAC地址失败: {str(e)}")
+                    # MAC地址修改失败不影响其他配置
+                    # 尝试重新启用网卡
+                    try:
+                        cmd = f"netsh interface set interface \"{card}\" admin=enable"
+                        subprocess.run(cmd, shell=True, check=True)
+                        print("网卡已重新启用")
+                    except:
+                        pass
                 
-                # 修改MAC地址（使用PowerShell）
-                ps_mac_script = f"""
-$adapter = Get-NetAdapter -Name '{card}'
-if ($adapter) {{
-    Set-NetAdapterAdvancedProperty -Name '{card}' -DisplayName '{mac_name}' -DisplayValue '{mac}'
-    Write-Output 'MAC地址修改成功'
-}}
-"""
-                
+                # 验证MAC地址
+                ps_mac_check = f"Get-NetAdapter -Name '{card}' | Select-Object Name, MacAddress"
                 result = subprocess.run(
-                    ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_script],
+                    ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_check],
                     shell=True,
                     capture_output=True,
                     text=True,
                     encoding='utf-8',
                     errors='ignore'
                 )
-                
-                print(f"MAC地址修改返回码: {result.returncode}")
-                print(f"MAC地址修改输出: {result.stdout}")
-                print(f"MAC地址修改错误: {result.stderr}")
-                
-                # 启用网卡
-                cmd = f"netsh interface set interface \"{card}\" admin=enable"
-                subprocess.run(cmd, shell=True, check=True)
-                print("网卡已启用")
-                
-            except Exception as e:
-                print(f"修改MAC地址失败: {str(e)}")
-                # MAC地址修改失败不影响其他配置
-            
-            # 验证MAC地址
-            ps_mac_check = f"Get-NetAdapter -Name '{card}' | Select-Object Name, MacAddress"
-            result = subprocess.run(
-                ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_mac_check],
-                shell=True,
-                capture_output=True,
-                text=True,
-                encoding='utf-8',
-                errors='ignore'
-            )
-            print(f"验证MAC地址: {result.stdout}")
+                print(f"验证MAC地址: {result.stdout}")
+            else:
+                print("MAC地址为空，跳过修改")
             
             # 提示用户可能需要重启网卡
             QMessageBox.information(self, "提示", "网络配置已应用，某些更改可能需要重启网卡才能完全生效。")

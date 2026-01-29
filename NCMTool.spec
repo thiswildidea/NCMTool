@@ -5,7 +5,7 @@ a = Analysis(
     ['network_config_tool.py'],
     pathex=[],
     binaries=[],
-    datas=[('config.json', '.'), ('network.png', '.')],
+    datas=[('network.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

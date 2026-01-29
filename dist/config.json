@@ -5,25 +5,87 @@
     {
     "name": "杨益文",
     "ip": "192.168.107.184",
+    "deviceType":"Windows",
     "netmask": "255.255.255.0",
     "gateway": "192.168.107.1",
     "dns": "192.168.100.40",
     "mac": "C0180367D1D1",
     "mac_name": "网络地址"
+    },
+    {
+    "name": "L_Y_N",
+    "ip": "192.168.107.44",
+    "deviceType":"Windows",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.107.1",
+    "dns": "192.168.100.40",
+    "mac": "",
+    "mac_name": "网络地址"
+    },
+    {
+    "name": "L_Y_Y",
+    "ip": "192.168.107.41",
+    "deviceType":"LINUX",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.107.1",
+    "dns": "192.168.100.40",
+    "mac": "",
+    "mac_name": "网络地址"
+    },
+    {
+    "name": "L_M_K",
+    "ip": "192.168.107.37",
+    "deviceType":"Windows",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.107.1",
+    "dns": "192.168.100.40",
+    "mac": "",
+    "mac_name": "网络地址"
     }
   ]
   },
   {
-    "department": "ygfy",
+    "department": "遥感",
     "users": [
        {
-       "name": "ccc",
-       "ip": "192.168.108.185",
+       "name": "Y_W_Q",
+       "ip": "192.168.101.201",
+        "deviceType":"Windows",
        "netmask": "255.255.255.0",
-       "gateway": "192.168.108.1",
+       "gateway": "192.168.101.1",
        "dns": "192.168.100.40",
         "mac_name": "网络地址",
-       "mac": "C0180367D1D2"
+       "mac": ""
+    }
+  ]
+ },
+  {
+    "department": "二分院",
+    "users": [
+       {
+       "name": "D_W_T",
+       "ip": "192.168.102.81",
+        "deviceType":"Windows",
+       "netmask": "255.255.255.0",
+       "gateway": "192.168.102.1",
+       "dns": "192.168.100.40",
+        "mac_name": "网络地址",
+       "mac": ""
+    }
+  ]
+ },
+  {
+    "department": "应用研究中心",
+    "users": [
+       {
+       "name": "L_C_R",
+       "ip": "192.168.106.41",
+       "deviceType":"Windows",
+       "netmask": "255.255.255.0",
+       "gateway": "192.168.106.1",
+       "dns": "192.168.100.40",
+       "mac_name": "网络地址",
+       "mac": ""
     }
   ]
  }

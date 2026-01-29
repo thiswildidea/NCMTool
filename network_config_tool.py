@@ -361,16 +361,12 @@ class NetworkConfigTool(QMainWindow):
                 return False
             
             # 打印网卡信息
-            print(f"找到网卡: {card}, 索引: {nic_index}")
+
             
             # 设置IP地址、子网掩码和网关
             cmd = f"netsh interface ip set addr \"{card}\" static {ip} {netmask} {gateway}"
-            print(f"执行命令: {cmd}")
             # 使用正确的编码处理输出
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            print(f"命令返回码: {result.returncode}")
-            print(f"命令输出: {result.stdout}")
-            print(f"命令错误: {result.stderr}")
             
             if result.returncode != 0:
                 error_msg = result.stderr if result.stderr else "未知错误"
@@ -379,12 +375,8 @@ class NetworkConfigTool(QMainWindow):
             
             # 设置DNS
             cmd = f"netsh interface ip set dns \"{card}\" static {dns} primary"
-            print(f"执行命令: {cmd}")
             # 使用正确的编码处理输出
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            print(f"命令返回码: {result.returncode}")
-            print(f"命令输出: {result.stdout}")
-            print(f"命令错误: {result.stderr}")
             
             if result.returncode != 0:
                 error_msg = result.stderr if result.stderr else "未知错误"
@@ -394,11 +386,7 @@ class NetworkConfigTool(QMainWindow):
             # 设置备用DNS
             if dns2:
                 cmd = f"netsh interface ip add dns \"{card}\" {dns2} index=2"
-                print(f"执行命令: {cmd}")
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-                print(f"命令返回码: {result.returncode}")
-                print(f"命令输出: {result.stdout}")
-                print(f"命令错误: {result.stderr}")
                 
                 if result.returncode != 0:
                     error_msg = result.stderr if result.stderr else "未知错误"
@@ -408,20 +396,16 @@ class NetworkConfigTool(QMainWindow):
             # 验证配置是否生效
             cmd = f"netsh interface ip show addresses \"{card}\""
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            print(f"验证IP配置: {result.stdout}")
             
             cmd = f"netsh interface ip show dnsservers \"{card}\""
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            print(f"验证DNS配置: {result.stdout}")
             
             # 尝试修改MAC地址
             if mac:
-                print(f"尝试修改MAC地址为: {mac}")
                 try:
                     # 禁用网卡
                     cmd = f"netsh interface set interface \"{card}\" admin=disable"
                     subprocess.run(cmd, shell=True, check=True)
-                    print("网卡已禁用")
                     
                     # 等待网卡完全禁用
                     import time
@@ -440,14 +424,9 @@ class NetworkConfigTool(QMainWindow):
                         errors='ignore'
                     )
                     
-                    print(f"MAC地址修改返回码: {result.returncode}")
-                    print(f"MAC地址修改输出: {result.stdout}")
-                    print(f"MAC地址修改错误: {result.stderr}")
-                    
                     # 启用网卡
                     cmd = f"netsh interface set interface \"{card}\" admin=enable"
                     subprocess.run(cmd, shell=True, check=True)
-                    print("网卡已启用")
                     
                     # 等待网卡完全启用
                     time.sleep(3)
@@ -459,7 +438,6 @@ class NetworkConfigTool(QMainWindow):
                     try:
                         cmd = f"netsh interface set interface \"{card}\" admin=enable"
                         subprocess.run(cmd, shell=True, check=True)
-                        print("网卡已重新启用")
                     except:
                         pass
                 
@@ -473,7 +451,6 @@ class NetworkConfigTool(QMainWindow):
                     encoding='utf-8',
                     errors='ignore'
                 )
-                print(f"验证MAC地址: {result.stdout}")
             else:
                 print("MAC地址为空，跳过修改")
             

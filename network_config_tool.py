@@ -40,12 +40,32 @@ class NetworkConfigTool(QMainWindow):
             
             return os.path.join(base_path, relative_path)
         
+        def get_config_path():
+            """获取配置文件路径，优先使用程序所在目录"""
+            # 获取程序所在目录
+            if hasattr(sys, '_MEIPASS'):
+                # 打包后：获取可执行文件所在目录
+                # 注意：sys._MEIPASS是临时目录，不是可执行文件所在目录
+                # 所以需要通过sys.executable获取可执行文件路径，然后获取其所在目录
+                exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+            else:
+                # 未打包：获取当前工作目录
+                exe_dir = os.path.abspath('.')
+            
+            # 检查程序所在目录是否存在config.json
+            config_path = os.path.join(exe_dir, 'config.json')
+            if os.path.exists(config_path):
+                return config_path
+            
+            # 如果不存在，回退到resource_path逻辑
+            return resource_path('config.json')
+        
         # 使用resource_path函数获取图标路径
         icon_path = resource_path("network.png")
         self.setWindowIcon(QIcon(icon_path))
         
         # 配置文件路径
-        self.config_file = resource_path("config.json")
+        self.config_file = get_config_path()
         
         # 加载配置数据
         self.config_data = self.load_config()
@@ -92,10 +112,31 @@ class NetworkConfigTool(QMainWindow):
     def load_config(self):
         """加载配置文件"""
         try:
+            # 检查文件是否存在
+            if not os.path.exists(self.config_file):
+                QMessageBox.warning(self, "警告", f"配置文件不存在: {self.config_file}\n将使用默认空配置")
+                return []
+            
+            # 检查文件是否可读
+            if not os.access(self.config_file, os.R_OK):
+                QMessageBox.warning(self, "警告", f"配置文件不可读: {self.config_file}\n将使用默认空配置")
+                return []
+            
+            # 读取配置文件
             with open(self.config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config_data = json.load(f)
+            
+            # 验证配置文件格式
+            if not isinstance(config_data, list):
+                QMessageBox.warning(self, "警告", "配置文件格式不正确，应为列表格式\n将使用默认空配置")
+                return []
+            
+            return config_data
+        except json.JSONDecodeError as e:
+            QMessageBox.warning(self, "警告", f"配置文件格式错误: {str(e)}\n将使用默认空配置")
+            return []
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"加载配置文件失败: {str(e)}")
+            QMessageBox.warning(self, "警告", f"加载配置文件失败: {str(e)}\n将使用默认空配置")
             return []
     
     def populate_tree(self):

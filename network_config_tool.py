@@ -344,7 +344,7 @@ class NetworkConfigTool(QMainWindow):
         selected_card = self.card_combo.currentText()
         
         # 验证输入
-        if not all([ip, netmask, gateway, dns]):
+        if not all([ip, netmask, gateway]):
             QMessageBox.warning(self, "警告", "请确保所有配置项都已填写")
             return
         
@@ -435,17 +435,18 @@ class NetworkConfigTool(QMainWindow):
                 return False
             
             # 设置DNS
-            cmd = f"netsh interface ip set dns \"{card}\" static {dns} primary"
-            # 使用正确的编码处理输出
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
-            if result.returncode != 0:
-                error_msg = result.stderr if result.stderr else "未知错误"
-                QMessageBox.critical(self, "错误", f"设置DNS失败: {error_msg}")
-                return False
+            if dns and dns.strip():
+                cmd = f"netsh interface ip set dns \"{card}\" static {dns} primary"
+                # 使用正确的编码处理输出
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+                
+                if result.returncode != 0:
+                    error_msg = result.stderr if result.stderr else "未知错误"
+                    QMessageBox.critical(self, "错误", f"设置DNS失败: {error_msg}")
+                    return False
             
             # 设置备用DNS
-            if s_dns:
+            if s_dns and s_dns.strip():
                 cmd = f"netsh interface ip add dns \"{card}\" {s_dns} index=2"
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
                 
@@ -532,11 +533,12 @@ class NetworkConfigTool(QMainWindow):
         subprocess.run(cmd, shell=True, check=True)
         
         # 设置DNS
-        if s_dns:
-            cmd = f"networksetup -setdnsservers '{card}' {dns} {s_dns}"
-        else:
-            cmd = f"networksetup -setdnsservers '{card}' {dns}"
-        subprocess.run(cmd, shell=True, check=True)
+        if dns and dns.strip():
+            if s_dns and s_dns.strip():
+                cmd = f"networksetup -setdnsservers '{card}' {dns} {s_dns}"
+            else:
+                cmd = f"networksetup -setdnsservers '{card}' {dns}"
+            subprocess.run(cmd, shell=True, check=True)
         
         # 设置MAC地址
         # 注意：macOS下修改MAC地址需要root权限
@@ -556,10 +558,11 @@ class NetworkConfigTool(QMainWindow):
                       shell=True, check=True)
         
         # 设置DNS
-        with open('/etc/resolv.conf', 'w') as f:
-            f.write(f'nameserver {dns}\n')
-            if s_dns:
-                f.write(f'nameserver {s_dns}\n')
+        if dns and dns.strip():
+            with open('/etc/resolv.conf', 'w') as f:
+                f.write(f'nameserver {dns}\n')
+                if s_dns and s_dns.strip():
+                    f.write(f'nameserver {s_dns}\n')
         
         # 设置MAC地址
         subprocess.run(['sudo', 'ifconfig', card, 'hw', 'ether', mac], 

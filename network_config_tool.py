@@ -22,8 +22,8 @@ class NetworkConfigTool(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("网络配置管理工具")
-        self.setGeometry(100, 100, 600, 300)
-        self.setFixedSize(600, 300)
+        self.setGeometry(100, 100, 600, 320)
+        self.setFixedSize(600, 320)
         
         # 设置窗口图标
         from PyQt6.QtGui import QIcon
@@ -248,6 +248,18 @@ class NetworkConfigTool(QMainWindow):
         device_layout.addWidget(self.device_edit)
         form_layout.addLayout(device_layout)
         
+        # 设备名称
+        deviceName_layout = QHBoxLayout()
+        self.deviceName_label = QLabel("设备名称:")
+        self.deviceName_label.setFixedWidth(80)
+        self.deviceName_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.deviceName_edit = QLineEdit()
+        self.deviceName_edit.setReadOnly(True)  # 设备类型设为只读
+        deviceName_layout.addWidget(self.deviceName_label)
+        deviceName_layout.addWidget(self.deviceName_edit)
+        form_layout.addLayout(deviceName_layout)
+        
         # IP地址
         ip_layout = QHBoxLayout()
         self.ip_label = QLabel("IP地址: <span style='color:red'>*</span>")
@@ -399,6 +411,10 @@ class NetworkConfigTool(QMainWindow):
                 self.device_edit.setText(user_data['deviceType'])
             else:
                 self.device_edit.setText('')
+            if 'deviceName' in user_data:
+                self.deviceName_edit.setText(user_data['deviceName'])
+            else:
+                self.deviceName_edit.setText('')
             self.ip_edit.setText(user_data['ip'])
             self.netmask_edit.setText(user_data['netmask'])
             self.gateway_edit.setText(user_data['gateway'])

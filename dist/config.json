@@ -4,6 +4,7 @@
    "users": [
     {
     "name": "杨益文",
+    "deviceName":"GIS",
     "ip": "192.168.107.184",
     "deviceType":"Windows",
     "netmask": "255.255.255.0",
@@ -14,36 +15,63 @@
     "mac_name": "网络地址"
     },
     {
+    "name": "yyw备用1",
+    "deviceName":"linuxserver-adxdex",
+    "ip": "192.168.107.49",
+    "deviceType":"Windows",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.107.1",
+    "dns": "192.168.100.40",
+    "s_dns": "",
+    "mac": "1866DA126E28",
+    "mac_name": "网络地址"
+    },
+    {
+    "name": "yyw备用2",
+    "deviceName":"linuxserver-xcdxw",
+    "ip": "192.168.107.173",
+    "deviceType":"Windows",
+    "netmask": "255.255.255.0",
+    "gateway": "192.168.107.1",
+    "dns": "192.168.100.40",
+    "s_dns": "",
+    "mac": "004E02BEFF08",
+    "mac_name": "网络地址"
+    },
+    {
     "name": "L_Y_N",
+    "deviceName":"DESKTOP-ET6CCAT",
     "ip": "192.168.107.44",
     "deviceType":"Windows",
     "netmask": "255.255.255.0",
     "gateway": "192.168.107.1",
     "dns": "192.168.100.40",
     "s_dns": "",
-    "mac": "",
+    "mac": "5CF9DD73AA42",
     "mac_name": "网络地址"
     },
     {
     "name": "L_Y_Y",
+    "deviceName":"user-PC",
     "ip": "192.168.107.41",
     "deviceType":"LINUX",
     "netmask": "255.255.255.0",
     "gateway": "192.168.107.1",
     "dns": "192.168.100.40",
     "s_dns": "",
-    "mac": "",
+    "mac": "E8611A2B8802",
     "mac_name": "网络地址"
     },
     {
     "name": "L_M_K",
+    "deviceName":"LMK-PC",
     "ip": "192.168.107.37",
     "deviceType":"Windows",
     "netmask": "255.255.255.0",
     "gateway": "192.168.107.1",
     "dns": "192.168.100.40",
     "s_dns": "",
-    "mac": "",
+    "mac": "54BF64A03543",
     "mac_name": "网络地址"
     }
   ]
@@ -53,6 +81,7 @@
     "users": [
        {
        "name": "Y_W_Q",
+       "deviceName":"DESKTOP-J7BEEPN",
        "ip": "192.168.101.201",
         "deviceType":"Windows",
        "netmask": "255.255.255.0",
@@ -60,7 +89,7 @@
        "dns": "192.168.100.40",
        "s_dns": "",
         "mac_name": "网络地址",
-       "mac": ""
+       "mac": "2CF05D48B322"
     }
   ]
  },
@@ -69,6 +98,7 @@
     "users": [
        {
        "name": "D_W_T",
+       "deviceName":"DESKTOP-AK4CV7C",
        "ip": "192.168.102.81",
         "deviceType":"Windows",
        "netmask": "255.255.255.0",
@@ -76,7 +106,7 @@
        "dns": "192.168.100.40",
        "s_dns": "",
         "mac_name": "网络地址",
-       "mac": ""
+       "mac": "7486E2270BA1"
     }
   ]
  },
@@ -85,6 +115,7 @@
     "users": [
        {
        "name": "L_C_R",
+       "deviceName":"ADMINISTRATOR",
        "ip": "192.168.106.41",
        "deviceType":"Windows",
        "netmask": "255.255.255.0",
@@ -92,7 +123,24 @@
        "dns": "192.168.100.40",
        "s_dns": "",
        "mac_name": "网络地址",
-       "mac": ""
+       "mac": "004E01BEFF08"
+    }
+  ]
+ },
+  {
+    "department": "机关",
+    "users": [
+       {
+       "name": "CB",
+       "deviceName":"WIN-CAG1ACAPDO3",
+       "ip": "192.168.108.94",
+       "deviceType":"Windows",
+       "netmask": "255.255.255.0",
+       "gateway": "192.168.106.1",
+       "dns": "192.168.100.40",
+       "s_dns": "",
+       "mac_name": "网络地址",
+       "mac": "1866DA126E18"
     }
   ]
  }
